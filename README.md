@@ -43,3 +43,21 @@ The fully assembled prototype.  The clock tapped wires would be connected to the
 [prototype]: https://github.com/moxiknox/clock/blob/main/photos/prototype.jpg "Assembled prototype"
 
 
+## Software
+
+This esp32 is being controlled by my home assistant installation and programmed by esphome.  
+This lets me leverage an excellent ecosystem of libraries and features, namely:
+* ntp time
+* read / write variables from webui / mobile app
+
+The software doesn't know the position of the hands, it only tracks the number of ticks (time_position) since midnight in a variable.  From home assistant I can update a variable clock_position which will tell the esp32 the current position of the hands.  Using fast and slow adjustments the esp32 will correct the time until the position of the hands match the current time.  
+
+When daylight savings comes the clock with either wait one hour before resuming movement or, for one hour each second the clock will tick twice.  I found that any faster will cause too much blocking on the esp32 and destabilze the flow, it also risks the clock missing a tick or tock which would be mildly disasterous and not worth the risk.
+
+### Flow
+* Every 5s the current time is converted to "ticks" (total_tick) and compared to time_position. Depending on the outcome of that comparision variables are updated to indicate that the clock state is, fast, slow, or perfect.
+* Every 2s check if variable from home assistant (clock_position) is set, if so set time_position = clock_position.
+* Every 1s
+  * check if the state is fast, if so do not tick
+  * tick up to 2 times ( once in the normal case, twice if the current state is slow)
+
