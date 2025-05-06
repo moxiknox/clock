@@ -60,4 +60,10 @@ When daylight savings comes the clock with either wait one hour before resuming 
 * Every 1s
   * check if the state is fast, if so do not tick
   * tick up to 2 times ( once in the normal case, twice if the current state is slow)
+ 
+
+## Next steps
+
+Let this run for a week to make sure that it can keep accurate time.
+
 
