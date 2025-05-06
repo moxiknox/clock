@@ -1,0 +1,129 @@
+#
+# voltage divider: 3.3V VIN -> 51R -> 47R -> 51R -> -> GND
+#                             |
+#                         1.7V VOUT
+#                            
+# GPIO: 22 -> B1A Forward
+# GPIO: 23 -> B1B Backward
+#  
+
+esphome:
+  name: clock
+  friendly_name: clock
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+globals:
+   - id: time_position
+     type: int
+     restore_value: no
+     initial_value: '70000'
+   - id: slow
+     type: int
+     restore_value: no
+     initial_value: '0'
+   - id: fast
+     type: int
+     restore_value: no
+     initial_value: '0'
+   - id: direction
+     type: int
+     restore_value: no
+     initial_value: '0'
+
+time: 
+  - platform: sntp
+    id: sntp_time
+  - platform: sntp
+    on_time: 
+      - seconds: '*'
+        then:
+          - lambda: |-
+              auto *out1 = id(forward);
+              auto *out2 = id(backward);              
+              if ( (id(slow) >= 0) and (id(fast) == 0) ) {
+                for ( int i = 0 ; i <= id(slow) ; i++) {
+                  if ( id(direction) == 0 ) {
+                    ESP_LOGD("Time", "tick");
+                    out1->turn_on();
+                    delay(30);
+                    out1->turn_off();
+                    id(direction) = 1 ;
+                  } else {
+                    ESP_LOGD("Time", "tock");
+                    out2->turn_on();
+                    delay(30);
+                    out2->turn_off();
+                    id(direction) = 0 ;
+                  }
+                  id(time_position)++;
+                  if ( id(slow) > 0 ){
+                   ESP_LOGD("Time", "skip: %d", i);
+                   delay(100);
+                  }
+                }
+                id(slow) = 0;
+              }
+              if ( id(fast) > 1) {
+               ESP_LOGD("Time", "wait 5 sec");
+              } else if ( id(fast) == 1 ) {
+                ESP_LOGD("Time", "wait 1 sec");
+                id(fast) = 0 ;
+              }
+              if ( id(time_position) >= 86400) {
+                id(time_position) = 0;
+              }
+                 
+      - seconds: '/5'
+        then:
+          - lambda: |-
+              auto time_hour_tick = id(sntp_time).now().hour * 3600 ;
+              auto time_min_tick = id(sntp_time).now().minute * 60 ;
+              auto time_sec_tick = id(sntp_time).now().second ;
+              auto total_tick = (time_hour_tick + time_min_tick + time_sec_tick);
+              ESP_LOGD("Time", "%d %d %d", id(sntp_time).now().hour, id(sntp_time).now().minute, id(sntp_time).now().second);
+              if (id(time_position) < total_tick) {
+                
+                ESP_LOGD("Time err", "target: %d", total_tick);
+                ESP_LOGD("Time err", "current: %d", id(time_position));
+                ESP_LOGD("Time err", "SLOW");
+                id(fast) = 0;
+                id(slow) = 2;
+              } else if (id(time_position) > total_tick)
+              {
+                ESP_LOGD("Time err", "target: %d", total_tick);
+                ESP_LOGD("Time err", "current: %d", id(time_position));
+                ESP_LOGD("Time err", "FAST");
+                id(fast) = (id(time_position) - total_tick);
+                id(slow) = 0;
+              } else {
+                ESP_LOGD("Time err", "target: %d", total_tick);
+                ESP_LOGD("Time err", "current: %d", id(time_position));
+                ESP_LOGD("Time err", "PERFECT");
+                id(fast) = 0;
+                id(slow) = 0;
+              }
+      - seconds: '/2'
+        then:
+          - lambda: |-
+              if ( id(clock_position).state > 0 ) {
+                ESP_LOGD("Time position", "fix %d %d", id(time_position), id(clock_position).state);
+                id(time_position) = id(clock_position).state;
+                id(clock_position).state = 0;
+              }
+output:
+  - platform: gpio
+    pin: GPIO22
+    id: forward
+  - platform: gpio
+    pin: GPIO23
+    id: backward
+sensor:
+  - platform: homeassistant
+    id: clock_position
+    internal: False
+    entity_id: input_number.clock_position
+    
