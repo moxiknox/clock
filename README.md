@@ -61,6 +61,17 @@ When daylight savings comes the clock with either wait one hour before resuming 
   * check if the state is fast, if so do not tick
   * tick up to 2 times ( once in the normal case, twice if the current state is slow)
  
+### Move from breadboard to PCB proto board and attach to clock
+
+View from the back of the clock of the movement mounted back into the clock assembly.  For now the PCB is attached temporarily to the clock movement with a blob of hot glue.  
+![alt text][back assembled]
+
+[back assembled]: https://github.com/moxiknox/clock/blob/main/photos/back-assembled.jpg "Assembled clock rear view"
+
+View from the front.  
+![alt text][front assembled]
+
+[front assembled]: https://github.com/moxiknox/clock/blob/main/photos/front-assembled.jpg "Assembled clock front view"
 
 ## Next steps
 
